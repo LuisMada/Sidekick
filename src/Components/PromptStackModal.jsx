@@ -1,74 +1,47 @@
 import { useState, useEffect } from 'react'
 
-const PromptStackModal = ({ workspace, editingStack, onCreatePromptStack, onUpdatePromptStack, onClose }) => {
+const PromptBlockModal = ({ editingBlock, onCreatePromptBlock, onUpdatePromptBlock, onClose }) => {
   const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [selectedGlobalBlocks, setSelectedGlobalBlocks] = useState([])
-  const [selectedTaskBlocks, setSelectedTaskBlocks] = useState([])
+  const [type, setType] = useState('task')
+  const [content, setContent] = useState('')
 
   useEffect(() => {
-    if (editingStack) {
-      setName(editingStack.name || '')
-      setDescription(editingStack.description || '')
-      setSelectedGlobalBlocks(editingStack.globalBlockIds || [])
-      setSelectedTaskBlocks(editingStack.taskBlockIds || [])
+    if (editingBlock) {
+      setName(editingBlock.name || '')
+      setType(editingBlock.type || 'task')
+      setContent(editingBlock.content || '')
+    } else {
+      // Reset form for new block
+      setName('')
+      setType('task')
+      setContent('')
     }
-  }, [editingStack])
+  }, [editingBlock])
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!name || (selectedGlobalBlocks.length === 0 && selectedTaskBlocks.length === 0)) return
+    if (!name.trim() || !content.trim()) return
 
-    const stackData = {
-      name,
-      description,
-      globalBlockIds: selectedGlobalBlocks,
-      taskBlockIds: selectedTaskBlocks
+    const blockData = {
+      name: name.trim(),
+      type,
+      content: content.trim()
     }
 
-    if (editingStack) {
-      onUpdatePromptStack({ ...editingStack, ...stackData })
+    if (editingBlock) {
+      onUpdatePromptBlock({ ...editingBlock, ...blockData })
     } else {
-      onCreatePromptStack(stackData)
+      onCreatePromptBlock(blockData)
     }
-  }
-
-  const toggleGlobalBlock = (blockId) => {
-    setSelectedGlobalBlocks(prev =>
-      prev.includes(blockId)
-        ? prev.filter(id => id !== blockId)
-        : [...prev, blockId]
-    )
-  }
-
-  const toggleTaskBlock = (blockId) => {
-    setSelectedTaskBlocks(prev =>
-      prev.includes(blockId)
-        ? prev.filter(id => id !== blockId)
-        : [...prev, blockId]
-    )
-  }
-
-  const globalBlocks = workspace?.promptBlocks?.filter(block => block.type === 'global') || []
-  const taskBlocks = workspace?.promptBlocks?.filter(block => block.type === 'task') || []
-
-  const getPreviewPrompt = () => {
-    const selectedGlobals = globalBlocks.filter(block => selectedGlobalBlocks.includes(block.id))
-    const selectedTasks = taskBlocks.filter(block => selectedTaskBlocks.includes(block.id))
-    
-    const globalContent = selectedGlobals.map(block => block.content).join('\n\n')
-    const taskContent = selectedTasks.map(block => block.content).join('\n\n')
-    
-    return `${globalContent}${globalContent && taskContent ? '\n\n' : ''}${taskContent}`.trim()
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-90vh overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-90vh overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
-              {editingStack ? 'Edit Prompt Stack' : 'Create Prompt Stack'}
+              {editingBlock ? 'Edit Prompt Block' : 'Create Prompt Block'}
             </h2>
             <button
               onClick={onClose}
@@ -85,118 +58,76 @@ const PromptStackModal = ({ workspace, editingStack, onCreatePromptStack, onUpda
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Stack Name
+                  Block Name
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Customer Refund Handler, Complaint Resolution"
+                  placeholder="e.g., Customer Service Standards, Handle Refunds"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                  Block Type
                 </label>
-                <input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="When to use this stack"
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                  <option value="global">Global - Company-wide rules</option>
+                  <option value="task">Task - Situation-specific guidance</option>
+                </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Global Blocks Selection */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Select Global Blocks ({selectedGlobalBlocks.length})
-                </h3>
-                {globalBlocks.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No global blocks available.</p>
-                    <p className="text-sm">Create some global blocks first.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {globalBlocks.map((block) => (
-                      <label
-                        key={block.id}
-                        className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                          selectedGlobalBlocks.includes(block.id)
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedGlobalBlocks.includes(block.id)}
-                          onChange={() => toggleGlobalBlock(block.id)}
-                          className="h-4 w-4 text-blue-600 mt-1"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="font-medium text-gray-900">{block.name}</div>
-                          <div className="text-sm text-gray-600 line-clamp-2">{block.content}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {/* Content */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Block Content
+              </label>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={
+                  type === 'global' 
+                    ? "Enter company-wide rules and standards that apply across all situations..."
+                    : "Enter specific guidance for handling this type of situation..."
+                }
+                rows={6}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {type === 'global' 
+                  ? "Global blocks contain universal rules that apply to all situations (e.g., 'Always be respectful', 'Follow safety protocols')"
+                  : "Task blocks contain specific guidance for particular scenarios (e.g., 'For refunds, check receipt first')"
+                }
+              </p>
+            </div>
 
-              {/* Task Blocks Selection */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Select Task Blocks ({selectedTaskBlocks.length})
-                </h3>
-                {taskBlocks.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No task blocks available.</p>
-                    <p className="text-sm">Create some task blocks first.</p>
+            {/* Examples */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">
+                Example {type === 'global' ? 'Global' : 'Task'} Block:
+              </h4>
+              <div className="text-sm text-gray-700">
+                {type === 'global' ? (
+                  <div>
+                    <strong>Name:</strong> Customer Service Standards<br/>
+                    <strong>Content:</strong> Always greet customers warmly. Listen actively to their concerns. Never promise what you cannot deliver. Escalate complex issues to supervisors when needed.
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {taskBlocks.map((block) => (
-                      <label
-                        key={block.id}
-                        className={`flex items-start p-3 border rounded-lg cursor-pointer transition-colors ${
-                          selectedTaskBlocks.includes(block.id)
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTaskBlocks.includes(block.id)}
-                          onChange={() => toggleTaskBlock(block.id)}
-                          className="h-4 w-4 text-green-600 mt-1"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="font-medium text-gray-900">{block.name}</div>
-                          <div className="text-sm text-gray-600 line-clamp-2">{block.content}</div>
-                        </div>
-                      </label>
-                    ))}
+                  <div>
+                    <strong>Name:</strong> Handle Refund Requests<br/>
+                    <strong>Content:</strong> For refunds: Check receipt first. If no receipt, ask for purchase details and check system. Follow company refund policy. Offer alternatives if refund not possible (exchange, store credit).
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Preview */}
-            {(selectedGlobalBlocks.length > 0 || selectedTaskBlocks.length > 0) && (
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Combined Prompt Preview</h3>
-                <div className="bg-gray-50 rounded-lg p-4 border">
-                  <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">
-                    {getPreviewPrompt() || 'Select blocks to see preview...'}
-                  </pre>
-                </div>
-              </div>
-            )}
 
             {/* Submit */}
             <div className="flex space-x-3">
@@ -209,10 +140,10 @@ const PromptStackModal = ({ workspace, editingStack, onCreatePromptStack, onUpda
               </button>
               <button
                 type="submit"
-                disabled={!name || (selectedGlobalBlocks.length === 0 && selectedTaskBlocks.length === 0)}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!name.trim() || !content.trim()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingStack ? 'Update Stack' : 'Create Stack'}
+                {editingBlock ? 'Update Block' : 'Create Block'}
               </button>
             </div>
           </form>
@@ -222,4 +153,4 @@ const PromptStackModal = ({ workspace, editingStack, onCreatePromptStack, onUpda
   )
 }
 
-export default PromptStackModal
+export default PromptBlockModal

@@ -12,7 +12,8 @@ function App() {
     const newWorkspace = {
       ...workspaceData,
       id: `workspace-${Date.now()}`,
-      promptStacks: [],
+      promptBlocks: [], // Initialize empty array for prompt blocks
+      promptStacks: [], // Initialize empty array for prompt stacks
       createdAt: new Date().toISOString()
     }
     const updatedWorkspaces = [...workspaces, newWorkspace]
